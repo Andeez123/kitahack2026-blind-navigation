@@ -1,0 +1,9 @@
+{
+  "name": "VisionGuide AI",
+  "description": "An AI-powered navigation assistant for the visually impaired, providing real-time obstacle detection and intelligent voice guidance using Gemini Live.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
