@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [detectedObstacles, setDetectedObstacles] = useState<string[]>([]);
   const [gpsActive, setGpsActive] = useState(false);
   const [routePath, setRoutePath] = useState<string | null>(null);
+  const [backendDetections, setBackendDetections] = useState<any[]>([]);
   
   const [support, setSupport] = useState({ speech: false, mic: false, gps: false });
 
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   const frameIntervalRef = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const watchIdRef = useRef<number | null>(null);
+  const backendWsRef = useRef<WebSocket | null>(null);
 
   const isLiveRef = useRef(false);
   useEffect(() => {
@@ -223,6 +225,10 @@ const handleGetDirections = (destination: string) => {
     setRoutePath(null);
     nextStartTimeRef.current = 0;
     if (sessionRef.current) sessionRef.current.close?.();
+    if (backendWsRef.current) {
+        backendWsRef.current.close();
+        backendWsRef.current = null;
+    }
     if (frameIntervalRef.current) window.clearInterval(frameIntervalRef.current);
     sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
     sourcesRef.current.clear();
@@ -270,6 +276,23 @@ const handleGetDirections = (destination: string) => {
             source.connect(scriptProcessor);
             scriptProcessor.connect(audioIn.destination);
 
+            // Connect to backend detection service
+            const backendWs = new WebSocket('ws://localhost:8000/ws/vision');
+            backendWs.onopen = () => console.log("Connected to backend vision service");
+            backendWs.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.status === 'success') {
+                    setBackendDetections(data.detections || []);
+                    if (data.hazard) {
+                        playSystemSound('alert');
+                        setHazardDetected(true);
+                        setTimeout(() => setHazardDetected(false), 500);
+                    }
+                }
+            };
+            backendWs.onerror = (e) => console.error("Backend WebSocket error", e);
+            backendWsRef.current = backendWs;
+
             frameIntervalRef.current = window.setInterval(() => {
               if (videoRef.current && canvasRef.current && isLiveRef.current) {
                 const ctx = canvasRef.current.getContext('2d');
@@ -281,7 +304,13 @@ const handleGetDirections = (destination: string) => {
                       const reader = new FileReader();
                       reader.onloadend = () => {
                         const base64 = (reader.result as string).split(',')[1];
+                        // Send to Gemini
                         sessionPromise.then(s => s.sendRealtimeInput({ media: { data: base64, mimeType: 'image/jpeg' } }));
+                        
+                        // Send to Backend Detection Service
+                        if (backendWsRef.current && backendWsRef.current.readyState === WebSocket.OPEN) {
+                            backendWsRef.current.send(JSON.stringify({ image: base64 }));
+                        }
                       };
                       reader.readAsDataURL(b);
                     }
@@ -383,9 +412,38 @@ const handleGetDirections = (destination: string) => {
 
   return (
     <div className="flex flex-col h-screen bg-black text-white overflow-hidden font-sans select-none">
-      <video ref={videoRef} autoPlay playsInline muted 
-        className={`absolute top-4 right-4 w-24 h-32 object-cover rounded-xl border-2 border-zinc-800 z-50 transition-opacity duration-500 ${isLive ? 'opacity-100' : 'opacity-0'}`} 
-      />
+      <div className={`absolute top-4 right-4 w-24 h-32 z-50 transition-opacity duration-500 ${isLive ? 'opacity-100' : 'opacity-0'}`}>
+        <video ref={videoRef} autoPlay playsInline muted 
+          className="w-full h-full object-cover rounded-xl border-2 border-zinc-800"
+        />
+        {/* Detection Overlay on Thumbnail */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+          {backendDetections.map((det, i) => {
+            const [x1, y1, x2, y2] = det.box;
+            // Map 320x240 (backend) to video thumbnail dimensions
+            const left = (x1 / 320) * 100;
+            const top = (y1 / 240) * 100;
+            const width = ((x2 - x1) / 320) * 100;
+            const height = ((y2 - y1) / 240) * 100;
+            
+            return (
+              <div key={i} style={{
+                position: 'absolute',
+                left: `${left}%`,
+                top: `${top}%`,
+                width: `${width}%`,
+                height: `${height}%`,
+                border: '1px solid #22c55e',
+                backgroundColor: 'rgba(34, 197, 94, 0.2)'
+              }}>
+                <span className="text-[6px] text-white bg-green-500 px-0.5 leading-none absolute -top-1 left-0">
+                  {det.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <canvas ref={canvasRef} className="hidden" />
 
       {!hasInteracted ? (
