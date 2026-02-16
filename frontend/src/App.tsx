@@ -1,3 +1,5 @@
+/* global google */
+declare var google: any;
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, Modality, Type, FunctionDeclaration } from '@google/genai';
@@ -127,8 +129,8 @@ const App: React.FC = () => {
 
   const speakWithAgentVoice = async (text: string) => {
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-      const response = await ai.models.generateContent({
+const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const response = await genAI.models.generateContent({
         model: TTS_MODEL_NAME,
         contents: [{ parts: [{ text }] }],
         config: {
@@ -150,32 +152,65 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSearchPlace = async (query: string) => {
-    try {
-      const latLng = location ? `${location.latitude},${location.longitude}` : '';
-      const response = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${latLng}&radius=5000&key=${process.env.API_KEY}`);
-      const data = await response.json();
-      return data.results.slice(0, 3).map((r: any) => ({ name: r.name, address: r.formatted_address, place_id: r.place_id }));
-    } catch (e) { return { error: "Search failed." }; }
-  };
+  const handleSearchPlace = (query: string) => {
+  return new Promise((resolve) => {
+    if (typeof google === 'undefined') {
+      resolve({ error: "Google Maps SDK not loaded yet." });
+      return;
+    }
 
-  const handleGetDirections = async (destination: string) => {
-    try {
-      const origin = location ? `${location.latitude},${location.longitude}` : '';
-      const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=walking&key=${process.env.API_KEY}`);
-      const data = await response.json();
-      if (data.status === 'OK') {
-        const route = data.routes[0];
-        setRoutePath(route.overview_polyline.points);
-        return {
-          steps: route.legs[0].steps.map((s: any) => s.html_instructions.replace(/<[^>]*>?/gm, '')),
-          total_distance: route.legs[0].distance.text,
-          total_duration: route.legs[0].duration.text
-        };
+    const service = new google.maps.places.PlacesService(document.createElement('div'));
+    const request = {
+      query,
+      location: location ? new google.maps.LatLng(location.latitude, location.longitude) : undefined,
+      radius: 5000
+    };
+
+    service.textSearch(request, (results: any, status: any) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        resolve(results.slice(0, 3).map((r: any) => ({
+          name: r.name,
+          address: r.formatted_address,
+          place_id: r.place_id
+        })));
+      } else {
+        resolve({ error: "No places found nearby." });
       }
-      return { error: "Route not found." };
-    } catch (e) { return { error: "Directions error." }; }
-  };
+    });
+  });
+};
+
+const handleGetDirections = (destination: string) => {
+  return new Promise((resolve) => {
+    if (typeof google === 'undefined') {
+      resolve({ error: "SDK not loaded." });
+      return;
+    }
+
+    const directionsService = new google.maps.DirectionsService();
+    const request = {
+      origin: location ? new google.maps.LatLng(location.latitude, location.longitude) : '',
+      destination: destination,
+      travelMode: google.maps.TravelMode.WALKING
+    };
+
+    directionsService.route(request, (result: any, status: any) => {
+      if (status === google.maps.DirectionsStatus.OK && result) {
+        const route = result.routes[0];
+        setRoutePath(route.overview_polyline); // Store encoded polyline for the map
+
+        const leg = route.legs[0];
+        resolve({
+          steps: leg.steps.map((s: any) => s.instructions.replace(/<[^>]*>?/gm, '')),
+          total_distance: leg.distance?.text,
+          total_duration: leg.duration?.text
+        });
+      } else {
+        resolve({ error: "Could not find a walking route." });
+      }
+    });
+  });
+};
 
   const stopSession = useCallback(() => {
     if (!isLiveRef.current) return;
@@ -212,15 +247,15 @@ const App: React.FC = () => {
 
       if (videoRef.current) videoRef.current.srcObject = stream;
       
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-      const sessionPromise = ai.live.connect({
+       const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+      const sessionPromise = genAI.live.connect({
         model: MODEL_NAME,
         callbacks: {
           onopen: () => {
             setIsLive(true);
             isLiveRef.current = true;
             setStatus(NavigationStatus.ACTIVE);
-            sessionPromise.then(s => s.sendRealtimeInput({ text: "Agent: Be brief and immediate. Start by asking 'Where would you like to go today?' and immediately use the tools if a destination is mentioned." }));
+            sessionPromise.then((s: any) => s.sendRealtimeInput({ text: "Agent: Be brief and immediate. Start by asking 'Where would you like to go today?' and immediately use the tools if a destination is mentioned." }));
 
             const audioIn = audioContextInRef.current || new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
             audioContextInRef.current = audioIn;
@@ -256,7 +291,7 @@ const App: React.FC = () => {
             }, 1000 / FRAME_RATE);
           },
           onmessage: async (msg) => {
-            if (msg.serverContent?.inputTranscription) {
+            if (msg.serverContent?.inputTranscription?.text) {
               const transcript = msg.serverContent.inputTranscription.text.toLowerCase().trim();
               if (/(stop|quit|end|cancel|disconnect|finish)/.test(transcript)) {
                 stopSession();
@@ -264,8 +299,9 @@ const App: React.FC = () => {
               }
             }
 
-            if (msg.toolCall) {
+            if (msg.toolCall?.functionCalls) {
               for (const fc of msg.toolCall.functionCalls) {
+                if (!fc.args) continue;
                 let res = fc.name === 'search_place' ? await handleSearchPlace(fc.args.query as string) : await handleGetDirections(fc.args.destination as string);
                 sessionPromise.then(s => s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: { result: res } } }));
               }
@@ -383,7 +419,7 @@ const App: React.FC = () => {
           <div className="relative flex-1 bg-zinc-900 overflow-hidden">
             {location ? (
               <img className="w-full h-full object-cover grayscale invert contrast-125 opacity-90" 
-                src={`https://maps.googleapis.com/maps/api/staticmap?center=${location.latitude},${location.longitude}&zoom=19&size=640x640&scale=2&maptype=roadmap&key=${process.env.API_KEY}&style=feature:all|element:labels|invert_lightness:true${routePath ? `&path=weight:5|color:0xFAFF00|enc:${routePath}` : ''}`} 
+                src={`https://maps.googleapis.com/maps/api/staticmap?center=${location.latitude},${location.longitude}&zoom=19&size=640x640&scale=2&maptype=roadmap&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&style=feature:all|element:labels|invert_lightness:true${routePath ? `&path=weight:5|color:0xFAFF00|enc:${routePath}` : ''}`} 
                 alt="Map" />
             ) : <div className="w-full h-full flex items-center justify-center font-black uppercase text-zinc-700">Searching GPS...</div>}
             
