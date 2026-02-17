@@ -74,17 +74,18 @@ def process_frame(image_bytes):
 
     # Display for debugging (on server side)
     # We can also draw detections on the debug window
-    for det in detections:
-        b = det["box"]
-        cv2.rectangle(img, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
-        cv2.putText(img, f"{det['label']} {det['confidence']:.2f}", (int(b[0]), int(b[1])-10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    # for det in detections:
+    #     b = det["box"]
+    #     cv2.rectangle(img, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
+    #     cv2.putText(img, f"{det['label']} {det['confidence']:.2f}", (int(b[0]), int(b[1])-10), 
+    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                     
-    if has_hazard:
-        cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+    # if has_hazard:
+    #     cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
-    cv2.imshow("Detection Service Feed", img)
-    cv2.waitKey(1)
+    # cv2.namedWindow("Detection Service Feed", cv2.WINDOW_NORMAL)
+    # cv2.imshow("Detection Service Feed", img)
+    # cv2.waitKey(1)
         
     return {
         "status": "success", 
