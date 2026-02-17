@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import base64
 import json
 from services.obj_det import process_frame
+from services.depth_per import depth_obj_det
+import torch
+from ultralytics import YOLO
 
 app = FastAPI()
 
@@ -14,6 +17,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+yolo = YOLO("yolov8n.pt")
+midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small")
+midas.eval()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+midas.to(device)
+
+transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+transform = transforms.small_transform
+
+depth_per = depth_obj_det(yolo, midas, transform)
 
 @app.websocket("/ws/vision")
 async def websocket_endpoint(websocket: WebSocket):
@@ -33,7 +48,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     image_bytes = base64.b64decode(image_base64)
                     
                     # Process frame (display in cv2 window)
-                    result = process_frame(image_bytes)
+                    result = depth_per.process_frame(image_bytes)
+                    # result = process_frame(image_bytes)
                     
                     # Send result back to client
                     await websocket.send_json(result)
