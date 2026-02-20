@@ -12,9 +12,9 @@ class depth_obj_det:
         self._transform = transform
 
     def cal_depth(self, obj_depth):
-        if obj_depth < 0.3:
+        if obj_depth < 0.2:
             distance_label = "Very close"
-        elif obj_depth < 0.6:
+        elif obj_depth < 0.4:
             distance_label = "Close"
         else:
             distance_label = "Far"
