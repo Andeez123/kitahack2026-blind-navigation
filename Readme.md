@@ -6,7 +6,7 @@
 - Andrew Chong
 - Leah Liew
 - Cheong Li Hua
-Lee Yun Ling
+- Lee Yun Ling
 
 ## Key Features
 - Real-time object detection and depth estimation
