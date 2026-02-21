@@ -10,6 +10,7 @@ class depth_obj_det:
         self._yolo = yolo
         self._midas = midas.to(device)
         self._transform = transform
+        self.obstacle_classes = ['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck', 'traffic light', 'fire hydrant', 'stop sign', 'dog', 'chair', 'potted plant']
 
     def cal_depth(self, obj_depth):
         if obj_depth < 0.2:
@@ -49,6 +50,9 @@ class depth_obj_det:
             cls_id = int(box.cls[0])
             label = self._yolo.names[cls_id]
             conf = float(box.conf[0])
+
+            if label not in self.obstacle_classes:
+                break
             
             x1, y1, x2, y2 = map(int, box.xyxy[0])
 
@@ -72,6 +76,7 @@ class depth_obj_det:
                 "distance": distance_label
             })
         
+        # debug window, uncomment to check object detection
         # if has_hazard:
         #     cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
