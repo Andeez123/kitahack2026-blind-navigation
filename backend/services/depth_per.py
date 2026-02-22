@@ -13,7 +13,7 @@ class depth_obj_det:
         self.obstacle_classes = ['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck', 'traffic light', 'fire hydrant', 'stop sign', 'dog', 'chair', 'potted plant']
 
     def cal_depth(self, obj_depth):
-        if obj_depth < 0.2:
+        if obj_depth < 0.1:
             distance_label = "Very close"
         elif obj_depth < 0.4:
             distance_label = "Close"
@@ -77,12 +77,12 @@ class depth_obj_det:
             })
         
         # debug window, uncomment to check object detection
-        # if has_hazard:
-        #     cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+        if has_hazard:
+            cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
-        # cv2.namedWindow("Detection Service Feed", cv2.WINDOW_NORMAL)
-        # cv2.imshow("Detection Service Feed", img)
-        # cv2.waitKey(1)
+        cv2.namedWindow("Detection Service Feed", cv2.WINDOW_NORMAL)
+        cv2.imshow("Detection Service Feed", img)
+        cv2.waitKey(1)
 
         # Encode annotated frame to base64
         _, buffer = cv2.imencode('.jpg', img)
