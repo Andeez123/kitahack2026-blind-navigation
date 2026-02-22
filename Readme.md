@@ -26,6 +26,8 @@
 ### Backend
 ```bash
 cd backend
+python -m venv venv
+Window: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
