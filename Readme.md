@@ -27,7 +27,11 @@
 ```bash
 cd backend
 python -m venv venv
-Window: venv\Scripts\activate
+
+Activate environment:
+**Window:** venv\Scripts\activate
+**IOS:** source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
