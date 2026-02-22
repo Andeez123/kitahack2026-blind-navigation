@@ -49,6 +49,12 @@ Our solution is an AI-powered navigation system that uses computer vision and na
 ### Backend
 ```bash
 cd backend
+python -m venv venv
+
+Activate environment:
+**Window:** venv\Scripts\activate
+**IOS:** source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
