@@ -53,7 +53,7 @@ python -m venv venv
 
 Activate environment:
 **Window:** venv\Scripts\activate
-**IOS:** source venv/bin/activate
+**Mac OS:** source venv/bin/activate
 
 pip install -r requirements.txt
 ```
