@@ -6,3 +6,4 @@ websockets
 python-multipart
 ultralytics
 timm
+cv2
