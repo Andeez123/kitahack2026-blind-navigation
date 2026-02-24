@@ -77,12 +77,12 @@ class depth_obj_det:
             })
         
         # debug window, uncomment to check object detection
-        if has_hazard:
-            cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+        # if has_hazard:
+        #     cv2.putText(img, "HAZARD DETECTED", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
-        cv2.namedWindow("Detection Service Feed", cv2.WINDOW_NORMAL)
-        cv2.imshow("Detection Service Feed", img)
-        cv2.waitKey(1)
+        # cv2.namedWindow("Detection Service Feed", cv2.WINDOW_NORMAL)
+        # cv2.imshow("Detection Service Feed", img)
+        # cv2.waitKey(1)
 
         # Encode annotated frame to base64
         _, buffer = cv2.imencode('.jpg', img)
