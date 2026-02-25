@@ -44,6 +44,7 @@ Our solution is an AI-powered navigation system that uses computer vision and na
 
 ## Implementation Details and Innovation
 ### System Architecture
+<img width="1360" height="618" alt="kitahack2026 (1)" src="https://github.com/user-attachments/assets/0ac5bd74-255b-460f-bb25-f28e27a8d378" />
 
 ### Workflow
 1. **Initiation**: User grants camera, microphone, and GPS permissions.
