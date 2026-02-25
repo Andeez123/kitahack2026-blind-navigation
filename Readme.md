@@ -55,6 +55,7 @@ Our solution is an AI-powered navigation system that uses computer vision and na
 6. **Navigation**: Gemini processes the request, calculates the route using OpenRouteService, and provides real-time turn-by-turn voice guidance.
 
 ## Challenges Faced
+Deployment of the backend proved to be a huge headache, with 2 models to deploy on cloud services, multiple dependencies like OpenCV, and Pytorch had to be installed on a docker container, which took a long time. Initial deployment builds took a super long time as it was attempting to build the frontend and the node modules. We did not realize this error at first, which meant google cloud was trying to build 2.2GB worth of files, excluding node modules and frontend shrank the build size to around 2KB, which made the build process faster. 
 
 ## Installation & Setup
 
