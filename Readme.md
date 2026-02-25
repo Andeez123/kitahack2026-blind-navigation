@@ -27,20 +27,31 @@ Our solution is an AI-powered navigation system that uses computer vision and na
 
 ## Overview of Technologies Used
 ### Google Technologies
-- Google Gemini API
-- Google Maps API
-- Google Cloud Run
+- **Google Gemini API**: Powers the voice interaction, natural language understanding, and decision-making (Live API + TTS).
+- **Google Maps Platform**: 
+  - **JavaScript API**: For rendering maps and calculating distances.
+  - **Places API**: For location search and discovery.
+  - **Directions API**: For basic route planning.
+- **Google Cloud Run**: Hosts the high-performance Python vision processing backend.
 
 ### Other Technologies
-- React
-- FastAPI
-- YOLOv8
-- MiDaS
+- **React + Vite**: Frontend framework.
+- **FastAPI**: Asynchronous Python framework for handling real-time WebSocket communication.
+- **YOLOv8 (Ultralytics)**: State-of-the-art real-time object detection.
+- **MiDaS (Intel ISL)**: Deep-learning based monocular depth estimation.
+- **OpenRouteService**: Provides granular walking paths and turn-by-turn navigation data.
+- **Vercel**: Deployment platform for the frontend.
 
 ## Implementation Details and Innovation
 ### System Architecture
 
 ### Workflow
+1. **Initiation**: User grants camera, microphone, and GPS permissions.
+2. **Streaming**: Real-time camera frames are sent via WebSockets to the Python backend.
+3. **Detection**: The backend analyzes frames to identify obstacles and their distance (proximity).
+4. **Hazard Alerts**: If a hazard is detected within "Close" range, the app plays an immediate alert sound.
+5. **Voice Input**: User gives a destination command (e.g., "Take me to the nearest clinic").
+6. **Navigation**: Gemini processes the request, calculates the route using OpenRouteService, and provides real-time turn-by-turn voice guidance.
 
 ## Challenges Faced
 
@@ -80,3 +91,7 @@ npm run dev
 ``` 
 
 ## Future Roadmap
+- [ ] Multi-language support (Bahasa Malaysia focus).
+- [ ] Haptic feedback patterns for obstacle distance.
+- [ ] Local caching of map data for low-connectivity areas.
+- [ ] Integration with public transport APIs (Prasarana/LRT).
