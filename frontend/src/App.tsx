@@ -256,12 +256,19 @@ const App: React.FC = () => {
 
   const requestLocation = useCallback(() => {
     if (navigator.geolocation) {
+      console.log("Starting GPS location request...");
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
 
-      const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+      const options = { 
+        enableHighAccuracy: true, 
+        timeout: 20000, // Increased to 20s for better reliability on cold starts
+        maximumAge: 0 
+      };
+
       const success = (pos: GeolocationPosition) => {
+        console.log("GPS Fix obtained:", pos.coords.latitude, pos.coords.longitude, "Accuracy:", pos.coords.accuracy);
         setLocation({ 
           latitude: pos.coords.latitude, 
           longitude: pos.coords.longitude,
@@ -269,13 +276,32 @@ const App: React.FC = () => {
         });
         setGpsActive(true);
       };
+
       const errCb = (err: GeolocationPositionError) => {
+        console.error("GPS Error Code:", err.code, "Message:", err.message);
         setGpsActive(false);
-        if (err.code === err.PERMISSION_DENIED) setError("GPS permission denied.");
+        
+        switch(err.code) {
+          case err.PERMISSION_DENIED:
+            setError("GPS Permission Denied. Please enable location services in your browser.");
+            break;
+          case err.POSITION_UNAVAILABLE:
+            setError("GPS Position Unavailable. Ensure you have a clear view of the sky.");
+            break;
+          case err.TIMEOUT:
+            setError("GPS Request Timed Out. Retrying...");
+            // Optionally retry once or just wait for the watchPosition to eventually kick in
+            break;
+          default:
+            setError(`GPS Error: ${err.message}`);
+        }
       };
 
       navigator.geolocation.getCurrentPosition(success, errCb, options);
       watchIdRef.current = navigator.geolocation.watchPosition(success, errCb, options);
+    } else {
+      console.error("Browser does not support Geolocation.");
+      setError("Geolocation is not supported by this browser.");
     }
   }, []);
 
