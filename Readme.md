@@ -93,7 +93,7 @@ npm run dev
 ``` 
 
 ## Future Roadmap
-- [ ] Multi-language support (Bahasa Malaysia focus).
-- [ ] Haptic feedback patterns for obstacle distance.
-- [ ] Local caching of map data for low-connectivity areas.
-- [ ] Integration with public transport APIs (Prasarana/LRT).
+- Multi-language support (Bahasa Malaysia focus).
+- Haptic feedback patterns for obstacle distance.
+- Precise obstacle description and warning.
+- Mobile native application for iOS and Android.
