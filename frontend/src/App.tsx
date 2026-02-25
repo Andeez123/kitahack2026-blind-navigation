@@ -313,8 +313,8 @@ const App: React.FC = () => {
 
   const speakWithAgentVoice = async (text: string) => {
     try {
-      const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await genAI.models.generateContent({
+      const client = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+      const response = await client.models.generateContent({
         model: TTS_MODEL_NAME,
         contents: [{ parts: [{ text }] }],
         config: {
@@ -645,8 +645,10 @@ const App: React.FC = () => {
             setIsLive(true);
             isLiveRef.current = true;
             setStatus(NavigationStatus.ACTIVE);
+            console.log("Gemini Live session connected!");
             
             sessionPromise.then((s: any) => {
+              console.log("Sending initial system update...");
               s.sendRealtimeInput({ 
                 text: "The session has started. Greet the user very briefly (one sentence max) and immediately ask 'Where would you like to go?'" 
               });
@@ -668,21 +670,35 @@ const App: React.FC = () => {
             scriptProcessor.connect(audioIn.destination);
 
             const backendWsUrl = import.meta.env.VITE_BACKEND_WS_URL || 'ws://localhost:8000/ws/vision';
-            const backendWs = new WebSocket(backendWsUrl);
-            backendWs.onopen = () => console.log("Connected to backend vision service");
-            backendWs.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.status === 'success') {
-                    setBackendDetections(data.detections || []);
-                    if (data.hazard) {
-                        playSystemSound('alert');
-                        setHazardDetected(true);
-                        setTimeout(() => setHazardDetected(false), 500);
+            try {
+                console.log("Connecting to backend vision WebSocket:", backendWsUrl);
+                const backendWs = new WebSocket(backendWsUrl);
+                backendWs.onopen = () => console.log("Successfully connected to backend vision service");
+                backendWs.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.status === 'success') {
+                            setBackendDetections(data.detections || []);
+                            if (data.hazard) {
+                                playSystemSound('alert');
+                                setHazardDetected(true);
+                                setTimeout(() => setHazardDetected(false), 500);
+                            }
+                        }
+                    } catch (parseErr) {
+                        console.error("Error parsing backend message:", parseErr, e.data);
                     }
-                }
-            };
-            backendWs.onerror = (e) => console.error("Backend WebSocket error", e);
-            backendWsRef.current = backendWs;
+                };
+                backendWs.onerror = (e) => {
+                    console.error("Backend WebSocket error. Check if URL is correct and supports wss://", e);
+                    setError("Backend connection failed. Check console for details.");
+                };
+                backendWs.onclose = (e) => console.log("Backend vision WebSocket closed", e.code, e.reason);
+                backendWsRef.current = backendWs;
+            } catch (wsSetupErr) {
+                console.error("Failed to initialize backend WebSocket:", wsSetupErr);
+                setError(`WebSocket Setup Error: ${wsSetupErr instanceof Error ? wsSetupErr.message : String(wsSetupErr)}`);
+            }
 
             frameIntervalRef.current = window.setInterval(() => {
               if (videoRef.current && canvasRef.current && isLiveRef.current) {
@@ -854,7 +870,8 @@ GPS: ${location ? `${location.latitude},${location.longitude}` : 'Unknown — ca
       });
       sessionRef.current = await sessionPromise;
     } catch (err: any) {
-      setError(err.message);
+      console.error("Session Startup Failure:", err);
+      setError(`Startup Error: ${err.message || 'Unknown error'}`);
       setStatus(NavigationStatus.ERROR);
       stopSession();
     }

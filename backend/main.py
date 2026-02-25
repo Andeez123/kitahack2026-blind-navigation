@@ -1,14 +1,22 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import os
-from fastapi.middleware.cors import CORSMiddleware
-import base64
-import json
-from services.obj_det import process_frame
-from services.depth_per import depth_obj_det
-import torch
-from ultralytics import YOLO
+import logging
+import sys
+
+# Configure logging to be visible in Cloud Run
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout
+)
+logger = logging.getLogger("vision-backend")
 
 app = FastAPI()
+
+@app.get("/")
+async def health_check():
+    logger.info("Health check requested")
+    return {"status": "healthy", "service": "vision-guide-backend"}
+
+logger.info("Starting model initialization...")
 
 # Enable CORS
 app.add_middleware(
@@ -30,39 +38,34 @@ transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
 transform = transforms.small_transform
 
 depth_per = depth_obj_det(yolo, midas, transform)
+print("Models loaded successfully.")
 
 @app.websocket("/ws/vision")
 async def websocket_endpoint(websocket: WebSocket):
+    logger.info("Incoming WebSocket connection request...")
     await websocket.accept()
-    print("Client connected to vision WebSocket")
+    logger.info("WebSocket connection established successfully")
     try:
         while True:
-            # Receive data from the client
             data = await websocket.receive_text()
             try:
-                # Expecting JSON with { "image": "base64_string" }
                 payload = json.loads(data)
                 image_base64 = payload.get("image")
                 
                 if image_base64:
-                    # Decode base64 to bytes
                     image_bytes = base64.b64decode(image_base64)
-                    
-                    # Process frame (display in cv2 window)
                     result = depth_per.process_frame(image_bytes)
-                    # result = process_frame(image_bytes)
-                    
-                    # Send result back to client
                     await websocket.send_json(result)
             except json.JSONDecodeError:
                 await websocket.send_json({"status": "error", "message": "Invalid JSON"})
             except Exception as e:
+                logger.error(f"Processing error: {e}")
                 await websocket.send_json({"status": "error", "message": str(e)})
                 
     except WebSocketDisconnect:
-        print("Client disconnected")
+        logger.info("WebSocket client disconnected")
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket lifecycle error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
