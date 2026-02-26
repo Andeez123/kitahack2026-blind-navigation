@@ -1,4 +1,4 @@
-# AI Vision Guide with Real-time obstacle detection
+# NavAssist (AI Vision Guide with Real-time obstacle detection)
 
 ### Submission for Kitahack 2026 by team fluffly bears
 
